@@ -958,7 +958,8 @@
                 const draggedRect = this.draggedPlay.getBoundingClientRect();
                 const draggedCenter = draggedRect.top + draggedRect.height / 2;
 
-                let newIndex = 0;
+                // Calculate the target index in the DOM
+                let targetDomIndex = 0;
                 for (let i = 0; i < playItems.length; i++) {
                     const item = playItems[i];
                     if (item === this.draggedPlay) continue;
@@ -967,10 +968,10 @@
                     const itemCenter = itemRect.top + itemRect.height / 2;
 
                     if (draggedCenter < itemCenter) {
-                        newIndex = i;
+                        targetDomIndex = i;
                         break;
                     }
-                    newIndex = i + 1;
+                    targetDomIndex = i + 1;
                 }
 
                 // Reorder saved plays
@@ -979,6 +980,13 @@
                 
                 if (playIndex !== -1) {
                     const [play] = this.savedPlays.splice(playIndex, 1);
+                    
+                    // Calculate the correct array index accounting for the removed item
+                    let newIndex = targetDomIndex;
+                    if (playIndex < targetDomIndex) {
+                        newIndex = targetDomIndex - 1;
+                    }
+                    
                     this.savedPlays.splice(newIndex, 0, play);
                     this.saveSavedPlays();
                 }
