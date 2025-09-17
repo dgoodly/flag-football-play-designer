@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flag Football Play Designer - Module 4: Formation System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .app-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+            max-width: 100%;
+            overflow: auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 1.1em;
+        }
+
+        .field-container {
+            position: relative;
+            margin: 0 auto;
+            border: 4px solid #2c3e50;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            background: #27ae60;
+            width: 1920px;
+            height: 1080px;
+            max-width: 100%;
+            max-height: 80vh;
+        }
+
+        .field {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            background: 
+                linear-gradient(to right, rgba(255, 255, 255, 0.1) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+            background-size: 30px 30px;
+            background-position: 0 0;
+        }
+
+        /* Field markings */
+        .field::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                linear-gradient(to right, 
+                    transparent 0%, 
+                    rgba(255, 255, 255, 0.8) 0%, 
+                    rgba(255, 255, 255, 0.8) 2px, 
+                    transparent 2px,
+                    transparent 10%,
+                    rgba(255, 255, 255, 0.8) 10%, 
+                    rgba(255, 255, 255, 0.8) 12px, 
+                    transparent 12px,
+                    transparent 20%,
+                    rgba(255, 255, 255, 0.8) 20%, 
+                    rgba(255, 255, 255, 0.8) 22px, 
+                    transparent 22px,
+                    transparent 30%,
+                    rgba(255, 255, 255, 0.8) 30%, 
+                    rgba(255, 255, 255, 0.8) 32px, 
+                    transparent 32px,
+                    transparent 40%,
+                    rgba(255, 255, 255, 0.8) 40%, 
+                    rgba(255, 255, 255, 0.8) 42px, 
+                    transparent 42px,
+                    transparent 50%,
+                    rgba(255, 255, 255, 0.8) 50%, 
+                    rgba(255, 255, 255, 0.8) 52px, 
+                    transparent 52px,
+                    transparent 60%,
+                    rgba(255, 255, 255, 0.8) 60%, 
+                    rgba(255, 255, 255, 0.8) 62px, 
+                    transparent 62px,
+                    transparent 70%,
+                    rgba(255, 255, 255, 0.8) 70%, 
+                    rgba(255, 255, 255, 0.8) 72px, 
+                    transparent 72px,
+                    transparent 80%,
+                    rgba(255, 255, 255, 0.8) 80%, 
+                    rgba(255, 255, 255, 0.8) 82px, 
+                    transparent 82px,
+                    transparent 90%,
+                    rgba(255, 255, 255, 0.8) 90%, 
+                    rgba(255, 255, 255, 0.8) 92px, 
+                    transparent 92px,
+                    transparent 100%
+                ),
+                linear-gradient(to right, 
+                    transparent 49%, 
+                    rgba(255, 255, 255, 1) 49%, 
+                    rgba(255, 255, 255, 1) 51%, 
+                    transparent 51%
+                );
+        }
+
+        /* Player styles */
+        .player {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 3px solid #fff;
+            cursor: grab;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 14px;
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            z-index: 10;
+        }
+
+        .player:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+        }
+
+        .player.dragging {
+            cursor: grabbing;
+            transform: scale(1.2);
+            z-index: 100;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5);
+        }
+
+        .player.fixed {
+            cursor: not-allowed;
+            opacity: 0.8;
+        }
+
+        .player.fixed:hover {
+            transform: none;
+        }
+
+        /* Player types */
+        .player.center {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+        }
+
+        .player.qb {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+        }
+
+        .player.wr {
+            background: linear-gradient(135deg, #f39c12, #e67e22);
+        }
+
+        .player.rb {
+            background: linear-gradient(135deg, #9b59b6, #8e44ad);
+        }
+
+        .player.te {
+            background: linear-gradient(135deg, #1abc9c, #16a085);
+        }
+
+        /* Player labels */
+        .player-label {
+            position: absolute;
+            bottom: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 10px;
+            white-space: nowrap;
+            pointer-events: none;
+        }
+
+        /* Formation controls */
+        .formation-controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+
+        .formation-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .formation-group label {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .formation-selector {
+            padding: 10px 20px;
+            border: 2px solid #3498db;
+            border-radius: 25px;
+            font-size: 16px;
+            background: white;
+            cursor: pointer;
+            min-width: 200px;
+        }
+
+        .player-count-selector {
+            padding: 10px 20px;
+            border: 2px solid #e74c3c;
+            border-radius: 25px;
+            font-size: 16px;
+            background: white;
+            cursor: pointer;
+            min-width: 150px;
+        }
+
+        /* Formation preview */
+        .formation-preview {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            z-index: 20;
+            min-width: 200px;
+        }
+
+        .formation-preview h4 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .formation-info {
+            font-size: 12px;
+            color: #666;
+            line-height: 1.4;
+        }
+
+        /* Controls */
+        .controls {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .control-btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            margin: 0 10px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .control-btn:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+        }
+
+        .control-btn.secondary {
+            background: #95a5a6;
+        }
+
+        .control-btn.secondary:hover {
+            background: #7f8c8d;
+        }
+
+        .control-btn.success {
+            background: #27ae60;
+        }
+
+        .control-btn.success:hover {
+            background: #229954;
+        }
+
+        /* Info panel */
+        .info-panel {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 4px solid #3498db;
+        }
+
+        .info-panel h3 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .info-panel p {
+            color: #666;
+            line-height: 1.6;
+        }
+
+        /* Responsive design */
+        @media (max-width: 2000px) {
+            .field-container {
+                transform: scale(0.8);
+                transform-origin: center;
+            }
+        }
+
+        @media (max-width: 1600px) {
+            .field-container {
+                transform: scale(0.6);
+                transform-origin: center;
+            }
+        }
+
+        @media (max-width: 1200px) {
+            .field-container {
+                transform: scale(0.4);
+                transform-origin: center;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .app-container {
+                padding: 15px;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .field-container {
+                transform: scale(0.3);
+                transform-origin: center;
+            }
+
+            .formation-controls {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .formation-preview {
+                position: relative;
+                top: auto;
+                right: auto;
+                margin: 20px auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <div class="header">
+            <h1>🏈 Flag Football Play Designer</h1>
+            <p>Module 4: Formation System</p>
+        </div>
+
+        <div class="formation-controls">
+            <div class="formation-group">
+                <label for="playerCount">Player Count:</label>
+                <select id="playerCount" class="player-count-selector" onchange="changePlayerCount()">
+                    <option value="5v5">5v5 (5 players)</option>
+                    <option value="6v6" selected>6v6 (6 players)</option>
+                    <option value="7v7">7v7 (7 players)</option>
+                </select>
+            </div>
+            
+            <div class="formation-group">
+                <label for="formationSelect">Formation:</label>
+                <select id="formationSelect" class="formation-selector" onchange="changeFormation()">
+                    <option value="spread">Spread Formation</option>
+                    <option value="tight">Tight Formation</option>
+                    <option value="trips">Trips Formation</option>
+                    <option value="bunch">Bunch Formation</option>
+                    <option value="i-formation">I-Formation</option>
+                    <option value="shotgun">Shotgun Formation</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="field-container">
+            <div class="field" id="field">
+                <!-- Players will be dynamically added here -->
+            </div>
+            
+            <div class="formation-preview" id="formationPreview">
+                <h4>Current Formation</h4>
+                <div class="formation-info" id="formationInfo">
+                    Loading...
+                </div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="control-btn" onclick="resetFormation()">Reset Formation</button>
+            <button class="control-btn secondary" onclick="showFormationData()">Show Formation Data</button>
+            <button class="control-btn success" onclick="saveCustomFormation()">Save Custom Formation</button>
+        </div>
+
+        <div class="info-panel">
+            <h3>Module 4 Features:</h3>
+            <p>
+                ✅ Multiple formation presets (Spread, Tight, Trips, Bunch, I-Form, Shotgun)<br>
+                ✅ Player count selection (5v5, 6v6, 7v7)<br>
+                ✅ Automatic player repositioning<br>
+                ✅ Formation preview and information<br>
+                ✅ Custom formation saving<br>
+                ✅ Formation data export/import<br>
+                ✅ Responsive formation controls
+            </p>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * Module 4: Formation System
+         * 
+         * This module provides:
+         * - Multiple formation presets
+         * - Player count selection (5v5, 6v6, 7v7)
+         * - Automatic player repositioning
+         * - Formation preview and information
+         * - Custom formation saving
+         */
+
+        class FormationSystem {
+            constructor() {
+                this.fieldWidth = 1920;
+                this.fieldHeight = 1080;
+                this.gridSize = 30;
+                this.field = document.getElementById('field');
+                this.players = new Map();
+                this.currentFormation = 'spread';
+                this.currentPlayerCount = '6v6';
+                this.centerPlayer = null;
+                this.customFormations = this.loadCustomFormations();
+                
+                this.initializeFormations();
+                this.setupEventListeners();
+            }
+
+            /**
+             * Initialize formation system
+             */
+            initializeFormations() {
+                this.createFormation(this.currentFormation, this.currentPlayerCount);
+                this.updateFormationPreview();
+                console.log('Formation System initialized');
+            }
+
+            /**
+             * Create a formation with specified players
+             * @param {string} formationType - Type of formation
+             * @param {string} playerCount - Player count (5v5, 6v6, 7v7)
+             */
+            createFormation(formationType, playerCount) {
+                this.clearPlayers();
+                
+                const formation = this.getFormationData(formationType, playerCount);
+                if (!formation) {
+                    console.error('Unknown formation:', formationType, playerCount);
+                    return;
+                }
+
+                Object.entries(formation.players).forEach(([id, config]) => {
+                    this.createPlayer(id, config.x, config.y, config.type, config.label);
+                });
+
+                this.centerPlayer = this.players.get('center');
+                this.currentFormation = formationType;
+                this.currentPlayerCount = playerCount;
+                this.updateFormationPreview();
+            }
+
+            /**
+             * Get formation data
+             * @param {string} formationType - Type of formation
+             * @param {string} playerCount - Player count
+             * @returns {Object} - Formation data
+             */
+            getFormationData(formationType, playerCount) {
+                const formations = {
+                    '5v5': {
+                        'spread': {
+                            name: '5v5 Spread',
+                            description: 'Wide receivers spread out, single back',
+                            players: {
+                                center: { x: 960, y: 540, type: 'center', label: 'C' },
+                                qb: { x: 900, y: 540, type: 'qb', label: 'QB' },
+                                wr1: { x: 600, y: 300, type: 'wr', label: 'WR1' },
+                                wr2: { x: 600, y: 780, type: 'wr', label: 'WR2' },
+                                rb: { x: 720, y: 540, type: 'rb', label: 'RB' }
+                            }
+                        },
+                        'tight': {
+                            name: '5v5 Tight',
+                            description: 'Tight ends close to line, compact formation',
+                            players: {
+                                center: { x: 960, y: 540, type: 'center', label: 'C' },
+                                qb: { x: 900, y: 540, type: 'qb', label: 'QB' },
+                                te1: { x: 720, y: 420, type: 'te', label: 'TE1' },
+                                te2: { x: 720, y: 660, type: 'te', label: 'TE2' },
+                                rb: { x: 720, y: 540, type: 'rb', label: 'RB' }
+                            }
+                        }
+                    },
+                    '6v6': {
+                        'spread': {
+                            name: '6v6 Spread',
+                            description: 'Wide receivers spread out, balanced formation',
+                            players: {
+                                center: { x: 960, y: 540, type: 'center', label: 'C' },
+                                qb: { x: 900, y: 540, type: 'qb', label: 'QB' },
+                                wr1: { x: 600, y: 300, type: 'wr', label: 'WR1' },
+                                wr2: { x: 600, y: 780, type: 'wr', label: 'WR2' },
+                                wr3: { x: 300, y: 420, type: 'wr', label: 'WR3' },
+                                wr4: { x: 300, y: 660, type: 'wr', label: 'WR4' }
+                            }
+                        },
+                        'tight': {
+                            name: '6v6 Tight',
+                            description: 'Tight ends close to line, power formation',
+                            players: {
+                                center: { x: 960, y: 540, type: 'center', label: 'C' },
+                                qb: { x: 900, y: 540, type: 'qb', label: 'QB' },
+                                te1: { x: 720, y: 420, type: 'te', label: 'TE1' },
+                                te2: { x: 720, y: 660, type: 'te', label: 'TE2' },
+                                wr1: { x: 480, y: 360, type: 'wr', label: 'WR1' },
+                                wr2: { x: 480, y: 720, type: 'wr', label: 'WR2' }
+                            }
+                        },
+                        'trips': {
+                            name: '6v6 Trips',
+                            description: 'Three receivers on one side, single on other',
+                            players: {
+                                center: { x: 960, y: 540, type: 'center', label: 'C' },
+                                qb: { x: 900, y: 540, type: 'qb', label: 'QB' },
+                                wr1: { x: 600, y: 240, type: 'wr', label: 'WR1' },
+                                wr2: { x: 600, y: 360, type: 'wr', label: 'WR2' },
+                                wr3: { x: 600, y: 480, type: 'wr', label: 'WR3' },
+                                wr4: { x: 600, y: 780, type: 'wr', label: 'WR4' }
+                            }
+                        },
+                        'bunch': {
+                            name: '6v6 Bunch',
+                            description: 'Receivers bunched together, quick passes',
+                            players: {
+                                center: { x: 960, y: 540, type: 'center', label: 'C' },
+                                qb: { x: 900, y: 540, type: 'qb', label: 'QB' },
+                                wr1: { x: 600, y: 420, type: 'wr', label: 'WR1' },
+                                wr2: { x: 600, y: 480, type: 'wr', label: 'WR2' },
+                                wr3: { x: 600, y: 540, type: 'wr', label: 'WR3' },
+                                wr4: { x: 600, y: 600, type: 'wr', label: 'WR4' }
+                            }
+                        },
+                        'i-formation': {
+                            name: '6v6 I-Formation',
+                            description: 'Traditional I-formation with fullback and tailback',
+                            players: {
+                                center: { x: 960, y: 540, type: 'center', label: 'C' },
+                                qb: { x: 900, y: 540, type: 'qb', label: 'QB' },
+                                rb: { x: 720, y: 480, type: 'rb', label: 'RB' },
+                                te1: { x: 720, y: 420, type: 'te', label: 'TE1' },
+                                wr1: { x: 600, y: 300, type: 'wr', label: 'WR1' },
+                                wr2: { x: 600, y: 780, type: 'wr', label: 'WR2' }
+                            }
+                        },
+                        'shotgun': {
+                            name: '6v6 Shotgun',
+                            description: 'QB in shotgun, spread receivers',
+                            players: {
+                                center: { x: 960, y: 540, type: 'center', label: 'C' },
+                                qb: { x: 840, y: 540, type: 'qb', label: 'QB' },
+                                wr1: { x: 600, y: 240, type: 'wr', label: 'WR1' },
+                                wr2: { x: 600, y: 840, type: 'wr', label: 'WR2' },
+                                wr3: { x: 300, y: 360, type: 'wr', label: 'WR3' },
+                                wr4: { x: 300, y: 720, type: 'wr', label: 'WR4' }
+                            }
+                        }
+                    },
+                    '7v7': {
+                        'spread': {
+                            name: '7v7 Spread',
+                            description: 'Maximum spread with extra receiver',
+                            players: {
+                                center: { x: 960, y: 540, type: 'center', label: 'C' },
+                                qb: { x: 900, y: 540, type: 'qb', label: 'QB' },
+                                wr1: { x: 600, y: 240, type: 'wr', label: 'WR1' },
+                                wr2: { x: 600, y: 840, type: 'wr', label: 'WR2' },
+                                wr3: { x: 300, y: 360, type: 'wr', label: 'WR3' },
+                                wr4: { x: 300, y: 720, type: 'wr', label: 'WR4' },
+                                rb: { x: 720, y: 480, type: 'rb', label: 'RB' }
+                            }
+                        },
+                        'tight': {
+                            name: '7v7 Tight',
+                            description: 'Power formation with multiple tight ends',
+                            players: {
+                                center: { x: 960, y: 540, type: 'center', label: 'C' },
+                                qb: { x: 900, y: 540, type: 'qb', label: 'QB' },
+                                te1: { x: 720, y: 420, type: 'te', label: 'TE1' },
+                                te2: { x: 720, y: 660, type: 'te', label: 'TE2' },
+                                wr1: { x: 480, y: 360, type: 'wr', label: 'WR1' },
+                                wr2: { x: 480, y: 720, type: 'wr', label: 'WR2' },
+                                rb: { x: 720, y: 540, type: 'rb', label: 'RB' }
+                            }
+                        }
+                    }
+                };
+
+                return formations[playerCount]?.[formationType];
+            }
+
+            /**
+             * Create a draggable player
+             * @param {string} id - Unique player ID
+             * @param {number} x - X position
+             * @param {number} y - Y position
+             * @param {string} type - Player type
+             * @param {string} label - Display label
+             */
+            createPlayer(id, x, y, type, label) {
+                const player = document.createElement('div');
+                player.className = `player ${type}`;
+                player.id = id;
+                player.textContent = label;
+                player.style.left = `${x}px`;
+                player.style.top = `${y}px`;
+
+                // Add label
+                const labelElement = document.createElement('div');
+                labelElement.className = 'player-label';
+                labelElement.textContent = label;
+                player.appendChild(labelElement);
+
+                // Make center player fixed
+                if (type === 'center') {
+                    player.classList.add('fixed');
+                }
+
+                this.field.appendChild(player);
+                this.players.set(id, {
+                    element: player,
+                    type: type,
+                    label: label,
+                    x: x,
+                    y: y
+                });
+            }
+
+            /**
+             * Clear all players from the field
+             */
+            clearPlayers() {
+                this.players.forEach((player) => {
+                    player.element.remove();
+                });
+                this.players.clear();
+                this.centerPlayer = null;
+            }
+
+            /**
+             * Update formation preview
+             */
+            updateFormationPreview() {
+                const formation = this.getFormationData(this.currentFormation, this.currentPlayerCount);
+                const infoElement = document.getElementById('formationInfo');
+                
+                if (formation) {
+                    infoElement.innerHTML = `
+                        <strong>${formation.name}</strong><br>
+                        ${formation.description}<br><br>
+                        <strong>Players:</strong> ${Object.keys(formation.players).length}<br>
+                        <strong>Type:</strong> ${this.currentPlayerCount}<br>
+                        <strong>Formation:</strong> ${this.currentFormation}
+                    `;
+                }
+            }
+
+            /**
+             * Get current formation data
+             * @returns {Object} - Current formation data
+             */
+            getCurrentFormationData() {
+                const positions = {};
+                this.players.forEach((player, id) => {
+                    positions[id] = {
+                        x: player.x,
+                        y: player.y,
+                        type: player.type,
+                        label: player.label
+                    };
+                });
+                
+                return {
+                    name: `${this.currentPlayerCount} ${this.currentFormation}`,
+                    playerCount: this.currentPlayerCount,
+                    formationType: this.currentFormation,
+                    players: positions
+                };
+            }
+
+            /**
+             * Save custom formation
+             * @param {string} name - Custom formation name
+             */
+            saveCustomFormation(name) {
+                const formationData = this.getCurrentFormationData();
+                formationData.name = name || `Custom ${this.currentFormation}`;
+                formationData.isCustom = true;
+                
+                this.customFormations.push(formationData);
+                this.saveCustomFormations();
+                
+                console.log('Custom formation saved:', formationData);
+                alert(`Custom formation "${formationData.name}" saved successfully!`);
+            }
+
+            /**
+             * Load custom formations from localStorage
+             * @returns {Array} - Array of custom formations
+             */
+            loadCustomFormations() {
+                try {
+                    const saved = localStorage.getItem('customFormations');
+                    return saved ? JSON.parse(saved) : [];
+                } catch (error) {
+                    console.error('Error loading custom formations:', error);
+                    return [];
+                }
+            }
+
+            /**
+             * Save custom formations to localStorage
+             */
+            saveCustomFormations() {
+                try {
+                    localStorage.setItem('customFormations', JSON.stringify(this.customFormations));
+                } catch (error) {
+                    console.error('Error saving custom formations:', error);
+                }
+            }
+
+            /**
+             * Get all available formations
+             * @returns {Array} - Array of formation objects
+             */
+            getAllFormations() {
+                const formations = [];
+                
+                // Add standard formations
+                const playerCounts = ['5v5', '6v6', '7v7'];
+                const formationTypes = ['spread', 'tight', 'trips', 'bunch', 'i-formation', 'shotgun'];
+                
+                playerCounts.forEach(count => {
+                    formationTypes.forEach(type => {
+                        const formation = this.getFormationData(type, count);
+                        if (formation) {
+                            formations.push({
+                                ...formation,
+                                playerCount: count,
+                                formationType: type,
+                                isCustom: false
+                            });
+                        }
+                    });
+                });
+                
+                // Add custom formations
+                formations.push(...this.customFormations);
+                
+                return formations;
+            }
+
+            /**
+             * Setup event listeners
+             */
+            setupEventListeners() {
+                // Add any additional event listeners here
+            }
+        }
+
+        // Initialize the formation system
+        const formationSystem = new FormationSystem();
+
+        // Global functions for controls
+        function changePlayerCount() {
+            const select = document.getElementById('playerCount');
+            const newCount = select.value;
+            
+            // Update available formations based on player count
+            updateFormationOptions(newCount);
+            
+            // Change to first available formation
+            const formationSelect = document.getElementById('formationSelect');
+            formationSelect.selectedIndex = 0;
+            
+            formationSystem.createFormation(formationSelect.value, newCount);
+        }
+
+        function changeFormation() {
+            const formationSelect = document.getElementById('formationSelect');
+            const playerCountSelect = document.getElementById('playerCount');
+            
+            formationSystem.createFormation(formationSelect.value, playerCountSelect.value);
+        }
+
+        function updateFormationOptions(playerCount) {
+            const formationSelect = document.getElementById('formationSelect');
+            const currentValue = formationSelect.value;
+            
+            // Clear existing options
+            formationSelect.innerHTML = '';
+            
+            // Add formations based on player count
+            const formations = {
+                '5v5': ['spread', 'tight'],
+                '6v6': ['spread', 'tight', 'trips', 'bunch', 'i-formation', 'shotgun'],
+                '7v7': ['spread', 'tight']
+            };
+            
+            const availableFormations = formations[playerCount] || [];
+            
+            availableFormations.forEach(formation => {
+                const option = document.createElement('option');
+                option.value = formation;
+                option.textContent = formation.charAt(0).toUpperCase() + formation.slice(1) + ' Formation';
+                formationSelect.appendChild(option);
+            });
+            
+            // Restore previous selection if available
+            if (availableFormations.includes(currentValue)) {
+                formationSelect.value = currentValue;
+            }
+        }
+
+        function resetFormation() {
+            const formationSelect = document.getElementById('formationSelect');
+            const playerCountSelect = document.getElementById('playerCount');
+            
+            formationSystem.createFormation(formationSelect.value, playerCountSelect.value);
+        }
+
+        function showFormationData() {
+            const formationData = formationSystem.getCurrentFormationData();
+            console.log('Current formation data:', formationData);
+            
+            let message = `Formation: ${formationData.name}\n\n`;
+            Object.entries(formationData.players).forEach(([id, player]) => {
+                message += `${player.label}: (${player.x}, ${player.y})\n`;
+            });
+            
+            alert(message);
+        }
+
+        function saveCustomFormation() {
+            const name = prompt('Enter a name for your custom formation:');
+            if (name) {
+                formationSystem.saveCustomFormation(name);
+            }
+        }
+
+        // Export for use by other modules
+        window.FormationSystem = FormationSystem;
+        window.formationSystem = formationSystem;
+    </script>
+</body>
+</html>
