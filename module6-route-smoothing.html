@@ -1,0 +1,1115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flag Football Play Designer - Module 6: Route Smoothing</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .app-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+            max-width: 100%;
+            overflow: auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 1.1em;
+        }
+
+        .field-container {
+            position: relative;
+            margin: 0 auto;
+            border: 4px solid #2c3e50;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            background: #27ae60;
+            width: 1920px;
+            height: 1080px;
+            max-width: 100%;
+            max-height: 80vh;
+        }
+
+        .field {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            background: 
+                linear-gradient(to right, rgba(255, 255, 255, 0.1) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+            background-size: 30px 30px;
+            background-position: 0 0;
+        }
+
+        /* Field markings */
+        .field::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                linear-gradient(to right, 
+                    transparent 0%, 
+                    rgba(255, 255, 255, 0.8) 0%, 
+                    rgba(255, 255, 255, 0.8) 2px, 
+                    transparent 2px,
+                    transparent 10%,
+                    rgba(255, 255, 255, 0.8) 10%, 
+                    rgba(255, 255, 255, 0.8) 12px, 
+                    transparent 12px,
+                    transparent 20%,
+                    rgba(255, 255, 255, 0.8) 20%, 
+                    rgba(255, 255, 255, 0.8) 22px, 
+                    transparent 22px,
+                    transparent 30%,
+                    rgba(255, 255, 255, 0.8) 30%, 
+                    rgba(255, 255, 255, 0.8) 32px, 
+                    transparent 32px,
+                    transparent 40%,
+                    rgba(255, 255, 255, 0.8) 40%, 
+                    rgba(255, 255, 255, 0.8) 42px, 
+                    transparent 42px,
+                    transparent 50%,
+                    rgba(255, 255, 255, 0.8) 50%, 
+                    rgba(255, 255, 255, 0.8) 52px, 
+                    transparent 52px,
+                    transparent 60%,
+                    rgba(255, 255, 255, 0.8) 60%, 
+                    rgba(255, 255, 255, 0.8) 62px, 
+                    transparent 62px,
+                    transparent 70%,
+                    rgba(255, 255, 255, 0.8) 70%, 
+                    rgba(255, 255, 255, 0.8) 72px, 
+                    transparent 72px,
+                    transparent 80%,
+                    rgba(255, 255, 255, 0.8) 80%, 
+                    rgba(255, 255, 255, 0.8) 82px, 
+                    transparent 82px,
+                    transparent 90%,
+                    rgba(255, 255, 255, 0.8) 90%, 
+                    rgba(255, 255, 255, 0.8) 92px, 
+                    transparent 92px,
+                    transparent 100%
+                ),
+                linear-gradient(to right, 
+                    transparent 49%, 
+                    rgba(255, 255, 255, 1) 49%, 
+                    rgba(255, 255, 255, 1) 51%, 
+                    transparent 51%
+                );
+        }
+
+        /* Drawing canvas */
+        .drawing-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        .drawing-canvas.drawing {
+            pointer-events: all;
+        }
+
+        /* Toolbar */
+        .toolbar {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            z-index: 20;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .tool-btn {
+            width: 50px;
+            height: 50px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            transition: all 0.3s ease;
+            background: #ecf0f1;
+            color: #2c3e50;
+        }
+
+        .tool-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .tool-btn.active {
+            background: #3498db;
+            color: white;
+        }
+
+        .tool-btn.danger {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .tool-btn.danger:hover {
+            background: #c0392b;
+        }
+
+        .tool-btn.success {
+            background: #27ae60;
+            color: white;
+        }
+
+        .tool-btn.success:hover {
+            background: #229954;
+        }
+
+        /* Smoothing controls */
+        .smoothing-controls {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            z-index: 20;
+            min-width: 250px;
+        }
+
+        .smoothing-controls h4 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .smoothing-option {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .smoothing-option input[type="checkbox"] {
+            margin-right: 10px;
+        }
+
+        .smoothing-option label {
+            font-size: 14px;
+            color: #2c3e50;
+            cursor: pointer;
+        }
+
+        .smoothing-slider {
+            width: 100%;
+            margin: 10px 0;
+        }
+
+        .smoothing-value {
+            text-align: center;
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        /* Cursor styles */
+        .field.drawing-cursor {
+            cursor: crosshair;
+        }
+
+        .field.eraser-cursor {
+            cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="%23e74c3c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 21h10a2 2 0 0 0 2-2V9.414a1 1 0 0 0-.293-.707l-5.414-5.414A1 1 0 0 0 12.586 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2z"></path></svg>') 12 12, auto;
+        }
+
+        /* Controls */
+        .controls {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .control-btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            margin: 0 10px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .control-btn:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+        }
+
+        .control-btn.secondary {
+            background: #95a5a6;
+        }
+
+        .control-btn.secondary:hover {
+            background: #7f8c8d;
+        }
+
+        .control-btn.success {
+            background: #27ae60;
+        }
+
+        .control-btn.success:hover {
+            background: #229954;
+        }
+
+        /* Info panel */
+        .info-panel {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 4px solid #3498db;
+        }
+
+        .info-panel h3 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .info-panel p {
+            color: #666;
+            line-height: 1.6;
+        }
+
+        /* Responsive design */
+        @media (max-width: 2000px) {
+            .field-container {
+                transform: scale(0.8);
+                transform-origin: center;
+            }
+        }
+
+        @media (max-width: 1600px) {
+            .field-container {
+                transform: scale(0.6);
+                transform-origin: center;
+            }
+        }
+
+        @media (max-width: 1200px) {
+            .field-container {
+                transform: scale(0.4);
+                transform-origin: center;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .app-container {
+                padding: 15px;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .field-container {
+                transform: scale(0.3);
+                transform-origin: center;
+            }
+
+            .toolbar {
+                top: 10px;
+                left: 10px;
+                padding: 10px;
+            }
+
+            .tool-btn {
+                width: 40px;
+                height: 40px;
+                font-size: 16px;
+            }
+
+            .smoothing-controls {
+                top: 10px;
+                right: 10px;
+                padding: 10px;
+                min-width: 200px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <div class="header">
+            <h1>🏈 Flag Football Play Designer</h1>
+            <p>Module 6: Route Smoothing</p>
+        </div>
+
+        <div class="field-container">
+            <div class="field" id="field">
+                <canvas class="drawing-canvas" id="drawingCanvas"></canvas>
+                <div class="toolbar">
+                    <button class="tool-btn active" id="drawTool" title="Draw Routes">✏️</button>
+                    <button class="tool-btn" id="eraserTool" title="Eraser">🧹</button>
+                    <button class="tool-btn secondary" id="undoTool" title="Undo Last Route">↶</button>
+                    <button class="tool-btn danger" id="clearTool" title="Clear All Routes">🗑️</button>
+                </div>
+                
+                <div class="smoothing-controls">
+                    <h4>Route Smoothing</h4>
+                    <div class="smoothing-option">
+                        <input type="checkbox" id="autoSmooth" checked>
+                        <label for="autoSmooth">Auto-smooth while drawing</label>
+                    </div>
+                    <div class="smoothing-option">
+                        <input type="checkbox" id="preserveStraightLines" checked>
+                        <label for="preserveStraightLines">Preserve straight lines</label>
+                    </div>
+                    <div class="smoothing-option">
+                        <input type="checkbox" id="smoothExisting" checked>
+                        <label for="smoothExisting">Smooth existing routes</label>
+                    </div>
+                    <input type="range" class="smoothing-slider" id="smoothingLevel" min="0" max="100" value="50">
+                    <div class="smoothing-value" id="smoothingValue">Smoothing: 50%</div>
+                    <button class="tool-btn success" onclick="smoothAllRoutes()" style="width: 100%; margin-top: 10px;">Smooth All Routes</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="control-btn" onclick="createSampleRoutes()">Create Sample Routes</button>
+            <button class="control-btn secondary" onclick="showRouteData()">Show Route Data</button>
+            <button class="control-btn success" onclick="smoothAllRoutes()">Smooth All Routes</button>
+        </div>
+
+        <div class="info-panel">
+            <h3>Module 6 Features:</h3>
+            <p>
+                ✅ Real-time route smoothing while drawing<br>
+                ✅ Preserve straight lines option<br>
+                ✅ Smooth existing routes functionality<br>
+                ✅ Adjustable smoothing level (0-100%)<br>
+                ✅ Auto-smooth toggle for drawing<br>
+                ✅ Bezier curve smoothing algorithm<br>
+                ✅ Touch and mouse support<br>
+                ✅ Responsive smoothing controls
+            </p>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * Module 6: Route Smoothing System
+         * 
+         * This module provides:
+         * - Real-time route smoothing while drawing
+         * - Preserve straight lines option
+         * - Smooth existing routes functionality
+         * - Adjustable smoothing level
+         * - Bezier curve smoothing algorithm
+         */
+
+        class RouteSmoothingSystem {
+            constructor() {
+                this.fieldWidth = 1920;
+                this.fieldHeight = 1080;
+                this.gridSize = 30;
+                this.field = document.getElementById('field');
+                this.canvas = document.getElementById('drawingCanvas');
+                this.ctx = this.canvas.getContext('2d');
+                
+                this.currentTool = 'draw';
+                this.isDrawing = false;
+                this.currentPath = [];
+                this.routes = [];
+                this.undoStack = [];
+                
+                // Smoothing settings
+                this.autoSmooth = true;
+                this.preserveStraightLines = true;
+                this.smoothExisting = true;
+                this.smoothingLevel = 50;
+                
+                this.setupCanvas();
+                this.setupEventListeners();
+                this.setupToolbar();
+                this.setupSmoothingControls();
+            }
+
+            /**
+             * Setup the drawing canvas
+             */
+            setupCanvas() {
+                this.canvas.width = this.fieldWidth;
+                this.canvas.height = this.fieldHeight;
+                this.ctx.lineWidth = 4;
+                this.ctx.lineCap = 'round';
+                this.ctx.lineJoin = 'round';
+                this.ctx.strokeStyle = '#e74c3c';
+                
+                console.log('Route Smoothing System initialized');
+            }
+
+            /**
+             * Setup event listeners for drawing
+             */
+            setupEventListeners() {
+                // Mouse events
+                this.canvas.addEventListener('mousedown', this.handleMouseDown.bind(this));
+                this.canvas.addEventListener('mousemove', this.handleMouseMove.bind(this));
+                this.canvas.addEventListener('mouseup', this.handleMouseUp.bind(this));
+                this.canvas.addEventListener('mouseleave', this.handleMouseUp.bind(this));
+
+                // Touch events
+                this.canvas.addEventListener('touchstart', this.handleTouchStart.bind(this), { passive: false });
+                this.canvas.addEventListener('touchmove', this.handleTouchMove.bind(this), { passive: false });
+                this.canvas.addEventListener('touchend', this.handleTouchEnd.bind(this));
+                this.canvas.addEventListener('touchcancel', this.handleTouchEnd.bind(this));
+
+                // Prevent context menu on canvas
+                this.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+            }
+
+            /**
+             * Setup toolbar event listeners
+             */
+            setupToolbar() {
+                document.getElementById('drawTool').addEventListener('click', () => this.setTool('draw'));
+                document.getElementById('eraserTool').addEventListener('click', () => this.setTool('eraser'));
+                document.getElementById('undoTool').addEventListener('click', () => this.undoLastRoute());
+                document.getElementById('clearTool').addEventListener('click', () => this.clearAllRoutes());
+            }
+
+            /**
+             * Setup smoothing controls
+             */
+            setupSmoothingControls() {
+                const autoSmoothCheckbox = document.getElementById('autoSmooth');
+                const preserveStraightLinesCheckbox = document.getElementById('preserveStraightLines');
+                const smoothExistingCheckbox = document.getElementById('smoothExisting');
+                const smoothingSlider = document.getElementById('smoothingLevel');
+                const smoothingValue = document.getElementById('smoothingValue');
+
+                autoSmoothCheckbox.addEventListener('change', (e) => {
+                    this.autoSmooth = e.target.checked;
+                });
+
+                preserveStraightLinesCheckbox.addEventListener('change', (e) => {
+                    this.preserveStraightLines = e.target.checked;
+                });
+
+                smoothExistingCheckbox.addEventListener('change', (e) => {
+                    this.smoothExisting = e.target.checked;
+                });
+
+                smoothingSlider.addEventListener('input', (e) => {
+                    this.smoothingLevel = parseInt(e.target.value);
+                    smoothingValue.textContent = `Smoothing: ${this.smoothingLevel}%`;
+                });
+            }
+
+            /**
+             * Set the current drawing tool
+             * @param {string} tool - Tool name ('draw', 'eraser')
+             */
+            setTool(tool) {
+                this.currentTool = tool;
+                
+                // Update toolbar UI
+                document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
+                document.getElementById(tool + 'Tool').classList.add('active');
+                
+                // Update cursor
+                this.field.classList.remove('drawing-cursor', 'eraser-cursor');
+                if (tool === 'draw') {
+                    this.field.classList.add('drawing-cursor');
+                } else if (tool === 'eraser') {
+                    this.field.classList.add('eraser-cursor');
+                }
+            }
+
+            /**
+             * Snap coordinates to grid
+             * @param {number} x - X coordinate
+             * @param {number} y - Y coordinate
+             * @returns {Object} - Snapped coordinates
+             */
+            snapToGrid(x, y) {
+                const snappedX = Math.round(x / this.gridSize) * this.gridSize;
+                const snappedY = Math.round(y / this.gridSize) * this.gridSize;
+                
+                const clampedX = Math.max(0, Math.min(snappedX, this.fieldWidth));
+                const clampedY = Math.max(0, Math.min(snappedY, this.fieldHeight));
+                
+                return { x: clampedX, y: clampedY };
+            }
+
+            /**
+             * Handle mouse down event
+             * @param {MouseEvent} e - Mouse event
+             */
+            handleMouseDown(e) {
+                e.preventDefault();
+                this.startDrawing(e.clientX, e.clientY);
+            }
+
+            /**
+             * Handle mouse move event
+             * @param {MouseEvent} e - Mouse event
+             */
+            handleMouseMove(e) {
+                if (!this.isDrawing) return;
+                
+                e.preventDefault();
+                this.updateDrawing(e.clientX, e.clientY);
+            }
+
+            /**
+             * Handle mouse up event
+             * @param {MouseEvent} e - Mouse event
+             */
+            handleMouseUp(e) {
+                if (!this.isDrawing) return;
+                
+                e.preventDefault();
+                this.endDrawing();
+            }
+
+            /**
+             * Handle touch start event
+             * @param {TouchEvent} e - Touch event
+             */
+            handleTouchStart(e) {
+                e.preventDefault();
+                const touch = e.touches[0];
+                this.startDrawing(touch.clientX, touch.clientY);
+            }
+
+            /**
+             * Handle touch move event
+             * @param {TouchEvent} e - Touch event
+             */
+            handleTouchMove(e) {
+                if (!this.isDrawing) return;
+                
+                e.preventDefault();
+                const touch = e.touches[0];
+                this.updateDrawing(touch.clientX, touch.clientY);
+            }
+
+            /**
+             * Handle touch end event
+             * @param {TouchEvent} e - Touch event
+             */
+            handleTouchEnd(e) {
+                if (!this.isDrawing) return;
+                
+                e.preventDefault();
+                this.endDrawing();
+            }
+
+            /**
+             * Start drawing
+             * @param {number} clientX - Client X coordinate
+             * @param {number} clientY - Client Y coordinate
+             */
+            startDrawing(clientX, clientY) {
+                const rect = this.canvas.getBoundingClientRect();
+                const x = clientX - rect.left;
+                const y = clientY - rect.top;
+                
+                const snapped = this.snapToGrid(x, y);
+                
+                if (this.currentTool === 'draw') {
+                    this.isDrawing = true;
+                    this.currentPath = [snapped];
+                    
+                    // Start drawing on canvas
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(snapped.x, snapped.y);
+                } else if (this.currentTool === 'eraser') {
+                    this.eraseAtPoint(snapped.x, snapped.y);
+                }
+            }
+
+            /**
+             * Update drawing
+             * @param {number} clientX - Client X coordinate
+             * @param {number} clientY - Client Y coordinate
+             */
+            updateDrawing(clientX, clientY) {
+                if (!this.isDrawing) return;
+                
+                const rect = this.canvas.getBoundingClientRect();
+                const x = clientX - rect.left;
+                const y = clientY - rect.top;
+                
+                const snapped = this.snapToGrid(x, y);
+                
+                if (this.currentTool === 'draw') {
+                    // Only add point if it's different from the last point
+                    const lastPoint = this.currentPath[this.currentPath.length - 1];
+                    if (!lastPoint || lastPoint.x !== snapped.x || lastPoint.y !== snapped.y) {
+                        this.currentPath.push(snapped);
+                        
+                        // Draw line to new point
+                        this.ctx.lineTo(snapped.x, snapped.y);
+                        this.ctx.stroke();
+                    }
+                } else if (this.currentTool === 'eraser') {
+                    this.eraseAtPoint(snapped.x, snapped.y);
+                }
+            }
+
+            /**
+             * End drawing
+             */
+            endDrawing() {
+                if (!this.isDrawing) return;
+                
+                this.isDrawing = false;
+                
+                if (this.currentTool === 'draw' && this.currentPath.length > 1) {
+                    // Save the route
+                    this.saveRoute(this.currentPath);
+                }
+                
+                this.currentPath = [];
+            }
+
+            /**
+             * Save a route to the routes array
+             * @param {Array} path - Array of points
+             */
+            saveRoute(path) {
+                let finalPath = [...path];
+                
+                // Apply smoothing if enabled
+                if (this.autoSmooth && this.smoothingLevel > 0) {
+                    finalPath = this.smoothPath(path);
+                }
+                
+                const route = {
+                    id: Date.now(),
+                    path: finalPath,
+                    originalPath: [...path],
+                    color: this.ctx.strokeStyle,
+                    width: this.ctx.lineWidth,
+                    smoothed: this.autoSmooth && this.smoothingLevel > 0
+                };
+                
+                this.routes.push(route);
+                this.redrawAllRoutes();
+                console.log('Route saved:', route);
+            }
+
+            /**
+             * Smooth a path using Bezier curves
+             * @param {Array} path - Array of points
+             * @returns {Array} - Smoothed path
+             */
+            smoothPath(path) {
+                if (path.length < 3) return path;
+                
+                const smoothedPath = [];
+                const smoothingFactor = this.smoothingLevel / 100;
+                
+                // Always include the first point
+                smoothedPath.push(path[0]);
+                
+                for (let i = 1; i < path.length - 1; i++) {
+                    const prevPoint = path[i - 1];
+                    const currentPoint = path[i];
+                    const nextPoint = path[i + 1];
+                    
+                    // Check if this should be a straight line
+                    if (this.preserveStraightLines && this.isStraightLine(prevPoint, currentPoint, nextPoint)) {
+                        smoothedPath.push(currentPoint);
+                        continue;
+                    }
+                    
+                    // Calculate control points for Bezier curve
+                    const controlPoint1 = this.calculateControlPoint(prevPoint, currentPoint, smoothingFactor);
+                    const controlPoint2 = this.calculateControlPoint(nextPoint, currentPoint, smoothingFactor);
+                    
+                    // Generate smooth curve points
+                    const curvePoints = this.generateBezierCurve(
+                        prevPoint, controlPoint1, controlPoint2, currentPoint, 10
+                    );
+                    
+                    // Add curve points (skip first to avoid duplicates)
+                    smoothedPath.push(...curvePoints.slice(1));
+                }
+                
+                // Always include the last point
+                smoothedPath.push(path[path.length - 1]);
+                
+                return smoothedPath;
+            }
+
+            /**
+             * Check if three points form a straight line
+             * @param {Object} p1 - First point
+             * @param {Object} p2 - Second point
+             * @param {Object} p3 - Third point
+             * @returns {boolean} - True if straight line
+             */
+            isStraightLine(p1, p2, p3) {
+                const tolerance = 5; // pixels
+                
+                // Calculate cross product to check if points are collinear
+                const crossProduct = Math.abs(
+                    (p2.x - p1.x) * (p3.y - p1.y) - (p2.y - p1.y) * (p3.x - p1.x)
+                );
+                
+                return crossProduct < tolerance;
+            }
+
+            /**
+             * Calculate control point for Bezier curve
+             * @param {Object} point1 - First point
+             * @param {Object} point2 - Second point
+             * @param {number} factor - Smoothing factor
+             * @returns {Object} - Control point
+             */
+            calculateControlPoint(point1, point2, factor) {
+                const dx = point2.x - point1.x;
+                const dy = point2.y - point1.y;
+                
+                return {
+                    x: point1.x + dx * factor,
+                    y: point1.y + dy * factor
+                };
+            }
+
+            /**
+             * Generate Bezier curve points
+             * @param {Object} p0 - Start point
+             * @param {Object} p1 - First control point
+             * @param {Object} p2 - Second control point
+             * @param {Object} p3 - End point
+             * @param {number} segments - Number of segments
+             * @returns {Array} - Array of curve points
+             */
+            generateBezierCurve(p0, p1, p2, p3, segments) {
+                const points = [];
+                
+                for (let i = 0; i <= segments; i++) {
+                    const t = i / segments;
+                    const point = this.bezierPoint(p0, p1, p2, p3, t);
+                    points.push(point);
+                }
+                
+                return points;
+            }
+
+            /**
+             * Calculate point on Bezier curve
+             * @param {Object} p0 - Start point
+             * @param {Object} p1 - First control point
+             * @param {Object} p2 - Second control point
+             * @param {Object} p3 - End point
+             * @param {number} t - Parameter (0-1)
+             * @returns {Object} - Point on curve
+             */
+            bezierPoint(p0, p1, p2, p3, t) {
+                const u = 1 - t;
+                const tt = t * t;
+                const uu = u * u;
+                const uuu = uu * u;
+                const ttt = tt * t;
+                
+                const x = uuu * p0.x + 3 * uu * t * p1.x + 3 * u * tt * p2.x + ttt * p3.x;
+                const y = uuu * p0.y + 3 * uu * t * p1.y + 3 * u * tt * p2.y + ttt * p3.y;
+                
+                return { x, y };
+            }
+
+            /**
+             * Erase at a specific point
+             * @param {number} x - X coordinate
+             * @param {number} y - Y coordinate
+             */
+            eraseAtPoint(x, y) {
+                const eraserRadius = 20;
+                
+                // Find routes that intersect with the eraser
+                const routesToRemove = [];
+                
+                this.routes.forEach((route, index) => {
+                    for (let i = 0; i < route.path.length - 1; i++) {
+                        const point1 = route.path[i];
+                        const point2 = route.path[i + 1];
+                        
+                        // Check if eraser point is close to the line segment
+                        const distance = this.distanceToLineSegment(x, y, point1.x, point1.y, point2.x, point2.y);
+                        
+                        if (distance < eraserRadius) {
+                            routesToRemove.push(index);
+                            break;
+                        }
+                    }
+                });
+                
+                // Remove routes (in reverse order to maintain indices)
+                routesToRemove.reverse().forEach(index => {
+                    this.routes.splice(index, 1);
+                });
+                
+                if (routesToRemove.length > 0) {
+                    this.redrawAllRoutes();
+                }
+            }
+
+            /**
+             * Calculate distance from point to line segment
+             * @param {number} px - Point X
+             * @param {number} py - Point Y
+             * @param {number} x1 - Line start X
+             * @param {number} y1 - Line start Y
+             * @param {number} x2 - Line end X
+             * @param {number} y2 - Line end Y
+             * @returns {number} - Distance
+             */
+            distanceToLineSegment(px, py, x1, y1, x2, y2) {
+                const A = px - x1;
+                const B = py - y1;
+                const C = x2 - x1;
+                const D = y2 - y1;
+                
+                const dot = A * C + B * D;
+                const lenSq = C * C + D * D;
+                
+                if (lenSq === 0) return Math.sqrt(A * A + B * B);
+                
+                let param = dot / lenSq;
+                
+                let xx, yy;
+                
+                if (param < 0) {
+                    xx = x1;
+                    yy = y1;
+                } else if (param > 1) {
+                    xx = x2;
+                    yy = y2;
+                } else {
+                    xx = x1 + param * C;
+                    yy = y1 + param * D;
+                }
+                
+                const dx = px - xx;
+                const dy = py - yy;
+                return Math.sqrt(dx * dx + dy * dy);
+            }
+
+            /**
+             * Redraw all routes on the canvas
+             */
+            redrawAllRoutes() {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                this.routes.forEach(route => {
+                    this.ctx.strokeStyle = route.color;
+                    this.ctx.lineWidth = route.width;
+                    this.ctx.beginPath();
+                    
+                    if (route.path.length > 0) {
+                        this.ctx.moveTo(route.path[0].x, route.path[0].y);
+                        
+                        for (let i = 1; i < route.path.length; i++) {
+                            this.ctx.lineTo(route.path[i].x, route.path[i].y);
+                        }
+                        
+                        this.ctx.stroke();
+                    }
+                });
+                
+                // Reset to default style
+                this.ctx.strokeStyle = '#e74c3c';
+                this.ctx.lineWidth = 4;
+            }
+
+            /**
+             * Undo the last route
+             */
+            undoLastRoute() {
+                if (this.routes.length === 0) {
+                    console.log('No routes to undo');
+                    return;
+                }
+                
+                // Save to undo stack
+                this.undoStack.push(this.routes.pop());
+                
+                // Redraw canvas
+                this.redrawAllRoutes();
+                
+                console.log('Route undone');
+            }
+
+            /**
+             * Clear all routes
+             */
+            clearAllRoutes() {
+                if (this.routes.length === 0) {
+                    console.log('No routes to clear');
+                    return;
+                }
+                
+                if (confirm('Are you sure you want to clear all routes?')) {
+                    // Save to undo stack
+                    this.undoStack.push([...this.routes]);
+                    
+                    this.routes = [];
+                    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                    
+                    console.log('All routes cleared');
+                }
+            }
+
+            /**
+             * Smooth all existing routes
+             */
+            smoothAllRoutes() {
+                if (this.routes.length === 0) {
+                    console.log('No routes to smooth');
+                    return;
+                }
+                
+                this.routes.forEach(route => {
+                    if (route.originalPath) {
+                        route.path = this.smoothPath(route.originalPath);
+                        route.smoothed = true;
+                    } else {
+                        route.path = this.smoothPath(route.path);
+                        route.smoothed = true;
+                    }
+                });
+                
+                this.redrawAllRoutes();
+                console.log('All routes smoothed');
+            }
+
+            /**
+             * Create sample routes for testing
+             */
+            createSampleRoutes() {
+                this.clearAllRoutes();
+                
+                const sampleRoutes = [
+                    {
+                        id: Date.now(),
+                        path: [
+                            { x: 600, y: 300 },
+                            { x: 480, y: 240 },
+                            { x: 360, y: 180 },
+                            { x: 240, y: 120 }
+                        ],
+                        color: '#e74c3c',
+                        width: 4
+                    },
+                    {
+                        id: Date.now() + 1,
+                        path: [
+                            { x: 600, y: 780 },
+                            { x: 480, y: 840 },
+                            { x: 360, y: 900 },
+                            { x: 240, y: 960 }
+                        ],
+                        color: '#e74c3c',
+                        width: 4
+                    },
+                    {
+                        id: Date.now() + 2,
+                        path: [
+                            { x: 900, y: 540 },
+                            { x: 780, y: 480 },
+                            { x: 660, y: 420 },
+                            { x: 540, y: 360 }
+                        ],
+                        color: '#e74c3c',
+                        width: 4
+                    }
+                ];
+
+                this.routes = sampleRoutes;
+                this.redrawAllRoutes();
+                console.log('Sample routes created');
+            }
+
+            /**
+             * Get all route data
+             * @returns {Array} - Array of route objects
+             */
+            getRouteData() {
+                return [...this.routes];
+            }
+        }
+
+        // Initialize the route smoothing system
+        const smoothingSystem = new RouteSmoothingSystem();
+
+        // Global functions for controls
+        function createSampleRoutes() {
+            smoothingSystem.createSampleRoutes();
+        }
+
+        function showRouteData() {
+            const routes = smoothingSystem.getRouteData();
+            console.log('Current route data:', routes);
+            
+            let message = `Current Routes: ${routes.length}\n\n`;
+            routes.forEach((route, index) => {
+                message += `Route ${index + 1}: ${route.path.length} points (${route.smoothed ? 'smoothed' : 'original'})\n`;
+            });
+            
+            alert(message);
+        }
+
+        function smoothAllRoutes() {
+            smoothingSystem.smoothAllRoutes();
+        }
+
+        // Export for use by other modules
+        window.RouteSmoothingSystem = RouteSmoothingSystem;
+        window.smoothingSystem = smoothingSystem;
+    </script>
+</body>
+</html>

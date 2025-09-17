@@ -1,0 +1,1178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flag Football Play Designer - Module 5: Play Gallery</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .app-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+            max-width: 100%;
+            overflow: auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 1.1em;
+        }
+
+        .field-container {
+            position: relative;
+            margin: 0 auto;
+            border: 4px solid #2c3e50;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            background: #27ae60;
+            width: 1920px;
+            height: 1080px;
+            max-width: 100%;
+            max-height: 80vh;
+        }
+
+        .field {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            background: 
+                linear-gradient(to right, rgba(255, 255, 255, 0.1) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+            background-size: 30px 30px;
+            background-position: 0 0;
+        }
+
+        /* Field markings */
+        .field::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                linear-gradient(to right, 
+                    transparent 0%, 
+                    rgba(255, 255, 255, 0.8) 0%, 
+                    rgba(255, 255, 255, 0.8) 2px, 
+                    transparent 2px,
+                    transparent 10%,
+                    rgba(255, 255, 255, 0.8) 10%, 
+                    rgba(255, 255, 255, 0.8) 12px, 
+                    transparent 12px,
+                    transparent 20%,
+                    rgba(255, 255, 255, 0.8) 20%, 
+                    rgba(255, 255, 255, 0.8) 22px, 
+                    transparent 22px,
+                    transparent 30%,
+                    rgba(255, 255, 255, 0.8) 30%, 
+                    rgba(255, 255, 255, 0.8) 32px, 
+                    transparent 32px,
+                    transparent 40%,
+                    rgba(255, 255, 255, 0.8) 40%, 
+                    rgba(255, 255, 255, 0.8) 42px, 
+                    transparent 42px,
+                    transparent 50%,
+                    rgba(255, 255, 255, 0.8) 50%, 
+                    rgba(255, 255, 255, 0.8) 52px, 
+                    transparent 52px,
+                    transparent 60%,
+                    rgba(255, 255, 255, 0.8) 60%, 
+                    rgba(255, 255, 255, 0.8) 62px, 
+                    transparent 62px,
+                    transparent 70%,
+                    rgba(255, 255, 255, 0.8) 70%, 
+                    rgba(255, 255, 255, 0.8) 72px, 
+                    transparent 72px,
+                    transparent 80%,
+                    rgba(255, 255, 255, 0.8) 80%, 
+                    rgba(255, 255, 255, 0.8) 82px, 
+                    transparent 82px,
+                    transparent 90%,
+                    rgba(255, 255, 255, 0.8) 90%, 
+                    rgba(255, 255, 255, 0.8) 92px, 
+                    transparent 92px,
+                    transparent 100%
+                ),
+                linear-gradient(to right, 
+                    transparent 49%, 
+                    rgba(255, 255, 255, 1) 49%, 
+                    rgba(255, 255, 255, 1) 51%, 
+                    transparent 51%
+                );
+        }
+
+        /* Player styles */
+        .player {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 3px solid #fff;
+            cursor: grab;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 14px;
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            z-index: 10;
+        }
+
+        .player:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+        }
+
+        .player.dragging {
+            cursor: grabbing;
+            transform: scale(1.2);
+            z-index: 100;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5);
+        }
+
+        .player.fixed {
+            cursor: not-allowed;
+            opacity: 0.8;
+        }
+
+        .player.fixed:hover {
+            transform: none;
+        }
+
+        /* Player types */
+        .player.center {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+        }
+
+        .player.qb {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+        }
+
+        .player.wr {
+            background: linear-gradient(135deg, #f39c12, #e67e22);
+        }
+
+        .player.rb {
+            background: linear-gradient(135deg, #9b59b6, #8e44ad);
+        }
+
+        .player.te {
+            background: linear-gradient(135deg, #1abc9c, #16a085);
+        }
+
+        /* Player labels */
+        .player-label {
+            position: absolute;
+            bottom: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 10px;
+            white-space: nowrap;
+            pointer-events: none;
+        }
+
+        /* Drawing canvas */
+        .drawing-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        .drawing-canvas.drawing {
+            pointer-events: all;
+        }
+
+        /* Gallery */
+        .gallery {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            z-index: 20;
+            min-width: 300px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .gallery-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #ecf0f1;
+        }
+
+        .gallery-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .gallery-controls {
+            display: flex;
+            gap: 5px;
+        }
+
+        .gallery-btn {
+            width: 30px;
+            height: 30px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .gallery-btn.primary {
+            background: #3498db;
+            color: white;
+        }
+
+        .gallery-btn.primary:hover {
+            background: #2980b9;
+        }
+
+        .gallery-btn.danger {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .gallery-btn.danger:hover {
+            background: #c0392b;
+        }
+
+        .gallery-btn.secondary {
+            background: #95a5a6;
+            color: white;
+        }
+
+        .gallery-btn.secondary:hover {
+            background: #7f8c8d;
+        }
+
+        .play-item {
+            background: #f8f9fa;
+            border: 2px solid #ecf0f1;
+            border-radius: 10px;
+            padding: 10px;
+            margin-bottom: 10px;
+            cursor: grab;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .play-item:hover {
+            border-color: #3498db;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .play-item.dragging {
+            opacity: 0.5;
+            transform: rotate(5deg);
+        }
+
+        .play-item.selected {
+            border-color: #e74c3c;
+            background: #fdf2f2;
+        }
+
+        .play-name {
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+
+        .play-info {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .play-actions {
+            display: flex;
+            gap: 5px;
+            margin-top: 8px;
+        }
+
+        .play-action-btn {
+            padding: 4px 8px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 11px;
+            transition: all 0.3s ease;
+        }
+
+        .play-action-btn.load {
+            background: #27ae60;
+            color: white;
+        }
+
+        .play-action-btn.load:hover {
+            background: #229954;
+        }
+
+        .play-action-btn.delete {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .play-action-btn.delete:hover {
+            background: #c0392b;
+        }
+
+        .play-action-btn.duplicate {
+            background: #f39c12;
+            color: white;
+        }
+
+        .play-action-btn.duplicate:hover {
+            background: #e67e22;
+        }
+
+        .empty-gallery {
+            text-align: center;
+            color: #666;
+            font-style: italic;
+            padding: 20px;
+        }
+
+        /* Controls */
+        .controls {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .control-btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            margin: 0 10px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .control-btn:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+        }
+
+        .control-btn.secondary {
+            background: #95a5a6;
+        }
+
+        .control-btn.secondary:hover {
+            background: #7f8c8d;
+        }
+
+        .control-btn.success {
+            background: #27ae60;
+        }
+
+        .control-btn.success:hover {
+            background: #229954;
+        }
+
+        /* Info panel */
+        .info-panel {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 4px solid #3498db;
+        }
+
+        .info-panel h3 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .info-panel p {
+            color: #666;
+            line-height: 1.6;
+        }
+
+        /* Responsive design */
+        @media (max-width: 2000px) {
+            .field-container {
+                transform: scale(0.8);
+                transform-origin: center;
+            }
+        }
+
+        @media (max-width: 1600px) {
+            .field-container {
+                transform: scale(0.6);
+                transform-origin: center;
+            }
+        }
+
+        @media (max-width: 1200px) {
+            .field-container {
+                transform: scale(0.4);
+                transform-origin: center;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .app-container {
+                padding: 15px;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .field-container {
+                transform: scale(0.3);
+                transform-origin: center;
+            }
+
+            .gallery {
+                position: relative;
+                top: auto;
+                right: auto;
+                margin: 20px auto;
+                max-height: 300px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <div class="header">
+            <h1>🏈 Flag Football Play Designer</h1>
+            <p>Module 5: Play Gallery</p>
+        </div>
+
+        <div class="field-container">
+            <div class="field" id="field">
+                <canvas class="drawing-canvas" id="drawingCanvas"></canvas>
+                <div class="gallery" id="gallery">
+                    <div class="gallery-header">
+                        <div class="gallery-title">Play Gallery</div>
+                        <div class="gallery-controls">
+                            <button class="gallery-btn primary" onclick="saveCurrentPlay()" title="Save Current Play">💾</button>
+                            <button class="gallery-btn secondary" onclick="exportGallery()" title="Export Gallery">📤</button>
+                            <button class="gallery-btn secondary" onclick="importGallery()" title="Import Gallery">📥</button>
+                            <button class="gallery-btn danger" onclick="clearGallery()" title="Clear Gallery">🗑️</button>
+                        </div>
+                    </div>
+                    <div class="gallery-content" id="galleryContent">
+                        <div class="empty-gallery">No plays saved yet. Create a play and save it to see it here!</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="control-btn" onclick="showGalleryStats()">Gallery Stats</button>
+            <button class="control-btn secondary" onclick="createSamplePlays()">Create Sample Plays</button>
+            <button class="control-btn success" onclick="saveCurrentPlay()">Save Current Play</button>
+        </div>
+
+        <div class="info-panel">
+            <h3>Module 5 Features:</h3>
+            <p>
+                ✅ Save current play (players + routes) to gallery<br>
+                ✅ View saved plays in gallery interface<br>
+                ✅ Delete individual plays<br>
+                ✅ Reorder plays via drag-and-drop<br>
+                ✅ Load plays back to field<br>
+                ✅ Duplicate existing plays<br>
+                ✅ Export/import gallery data<br>
+                ✅ Touch and mouse support for all interactions
+            </p>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * Module 5: Play Gallery System
+         * 
+         * This module provides:
+         * - Save current play (players + routes) to gallery
+         * - View saved plays in gallery interface
+         * - Delete individual plays
+         * - Reorder plays via drag-and-drop
+         * - Load plays back to field
+         * - Duplicate existing plays
+         * - Export/import gallery data
+         */
+
+        class PlayGallerySystem {
+            constructor() {
+                this.fieldWidth = 1920;
+                this.fieldHeight = 1080;
+                this.gridSize = 30;
+                this.field = document.getElementById('field');
+                this.canvas = document.getElementById('drawingCanvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.galleryContent = document.getElementById('galleryContent');
+                
+                this.players = new Map();
+                this.routes = [];
+                this.savedPlays = this.loadSavedPlays();
+                this.draggedPlay = null;
+                this.dragOffset = { x: 0, y: 0 };
+                
+                this.setupCanvas();
+                this.setupEventListeners();
+                this.renderGallery();
+            }
+
+            /**
+             * Setup the drawing canvas
+             */
+            setupCanvas() {
+                this.canvas.width = this.fieldWidth;
+                this.canvas.height = this.fieldHeight;
+                this.ctx.lineWidth = 4;
+                this.ctx.lineCap = 'round';
+                this.ctx.lineJoin = 'round';
+                this.ctx.strokeStyle = '#e74c3c';
+            }
+
+            /**
+             * Setup event listeners
+             */
+            setupEventListeners() {
+                // Gallery drag and drop
+                this.galleryContent.addEventListener('mousedown', this.handleGalleryMouseDown.bind(this));
+                document.addEventListener('mousemove', this.handleGalleryMouseMove.bind(this));
+                document.addEventListener('mouseup', this.handleGalleryMouseUp.bind(this));
+
+                // Touch support for gallery
+                this.galleryContent.addEventListener('touchstart', this.handleGalleryTouchStart.bind(this), { passive: false });
+                document.addEventListener('touchmove', this.handleGalleryTouchMove.bind(this), { passive: false });
+                document.addEventListener('touchend', this.handleGalleryTouchEnd.bind(this));
+            }
+
+            /**
+             * Create a sample play for demonstration
+             */
+            createSamplePlay() {
+                this.clearField();
+                
+                // Create sample players
+                const samplePlayers = {
+                    center: { x: 960, y: 540, type: 'center', label: 'C' },
+                    qb: { x: 900, y: 540, type: 'qb', label: 'QB' },
+                    wr1: { x: 600, y: 300, type: 'wr', label: 'WR1' },
+                    wr2: { x: 600, y: 780, type: 'wr', label: 'WR2' },
+                    wr3: { x: 300, y: 420, type: 'wr', label: 'WR3' },
+                    wr4: { x: 300, y: 660, type: 'wr', label: 'WR4' }
+                };
+
+                Object.entries(samplePlayers).forEach(([id, config]) => {
+                    this.createPlayer(id, config.x, config.y, config.type, config.label);
+                });
+
+                // Create sample routes
+                const sampleRoutes = [
+                    {
+                        id: Date.now(),
+                        path: [
+                            { x: 600, y: 300 },
+                            { x: 480, y: 240 },
+                            { x: 360, y: 180 }
+                        ],
+                        color: '#e74c3c',
+                        width: 4
+                    },
+                    {
+                        id: Date.now() + 1,
+                        path: [
+                            { x: 600, y: 780 },
+                            { x: 480, y: 840 },
+                            { x: 360, y: 900 }
+                        ],
+                        color: '#e74c3c',
+                        width: 4
+                    }
+                ];
+
+                this.routes = sampleRoutes;
+                this.redrawAllRoutes();
+            }
+
+            /**
+             * Create a draggable player
+             * @param {string} id - Unique player ID
+             * @param {number} x - X position
+             * @param {number} y - Y position
+             * @param {string} type - Player type
+             * @param {string} label - Display label
+             */
+            createPlayer(id, x, y, type, label) {
+                const player = document.createElement('div');
+                player.className = `player ${type}`;
+                player.id = id;
+                player.textContent = label;
+                player.style.left = `${x}px`;
+                player.style.top = `${y}px`;
+
+                // Add label
+                const labelElement = document.createElement('div');
+                labelElement.className = 'player-label';
+                labelElement.textContent = label;
+                player.appendChild(labelElement);
+
+                // Make center player fixed
+                if (type === 'center') {
+                    player.classList.add('fixed');
+                }
+
+                this.field.appendChild(player);
+                this.players.set(id, {
+                    element: player,
+                    type: type,
+                    label: label,
+                    x: x,
+                    y: y
+                });
+            }
+
+            /**
+             * Clear all players from the field
+             */
+            clearField() {
+                this.players.forEach((player) => {
+                    player.element.remove();
+                });
+                this.players.clear();
+                this.routes = [];
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+            }
+
+            /**
+             * Redraw all routes on the canvas
+             */
+            redrawAllRoutes() {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                this.routes.forEach(route => {
+                    this.ctx.strokeStyle = route.color;
+                    this.ctx.lineWidth = route.width;
+                    this.ctx.beginPath();
+                    
+                    if (route.path.length > 0) {
+                        this.ctx.moveTo(route.path[0].x, route.path[0].y);
+                        
+                        for (let i = 1; i < route.path.length; i++) {
+                            this.ctx.lineTo(route.path[i].x, route.path[i].y);
+                        }
+                        
+                        this.ctx.stroke();
+                    }
+                });
+                
+                // Reset to default style
+                this.ctx.strokeStyle = '#e74c3c';
+                this.ctx.lineWidth = 4;
+            }
+
+            /**
+             * Save current play to gallery
+             * @param {string} name - Play name
+             */
+            saveCurrentPlay(name) {
+                const playName = name || prompt('Enter a name for this play:');
+                if (!playName) return;
+
+                const playData = {
+                    id: Date.now(),
+                    name: playName,
+                    timestamp: new Date().toISOString(),
+                    players: this.getPlayerPositions(),
+                    routes: [...this.routes]
+                };
+
+                this.savedPlays.push(playData);
+                this.saveSavedPlays();
+                this.renderGallery();
+                
+                console.log('Play saved:', playData);
+                alert(`Play "${playName}" saved successfully!`);
+            }
+
+            /**
+             * Get current player positions
+             * @returns {Object} - Player positions
+             */
+            getPlayerPositions() {
+                const positions = {};
+                this.players.forEach((player, id) => {
+                    positions[id] = {
+                        x: player.x,
+                        y: player.y,
+                        type: player.type,
+                        label: player.label
+                    };
+                });
+                return positions;
+            }
+
+            /**
+             * Load a play from gallery
+             * @param {number} playId - Play ID
+             */
+            loadPlay(playId) {
+                const play = this.savedPlays.find(p => p.id === playId);
+                if (!play) return;
+
+                this.clearField();
+
+                // Load players
+                Object.entries(play.players).forEach(([id, config]) => {
+                    this.createPlayer(id, config.x, config.y, config.type, config.label);
+                });
+
+                // Load routes
+                this.routes = [...play.routes];
+                this.redrawAllRoutes();
+
+                console.log('Play loaded:', play);
+            }
+
+            /**
+             * Delete a play from gallery
+             * @param {number} playId - Play ID
+             */
+            deletePlay(playId) {
+                if (confirm('Are you sure you want to delete this play?')) {
+                    this.savedPlays = this.savedPlays.filter(p => p.id !== playId);
+                    this.saveSavedPlays();
+                    this.renderGallery();
+                    console.log('Play deleted:', playId);
+                }
+            }
+
+            /**
+             * Duplicate a play
+             * @param {number} playId - Play ID
+             */
+            duplicatePlay(playId) {
+                const play = this.savedPlays.find(p => p.id === playId);
+                if (!play) return;
+
+                const duplicatedPlay = {
+                    ...play,
+                    id: Date.now(),
+                    name: `${play.name} (Copy)`,
+                    timestamp: new Date().toISOString()
+                };
+
+                this.savedPlays.push(duplicatedPlay);
+                this.saveSavedPlays();
+                this.renderGallery();
+                
+                console.log('Play duplicated:', duplicatedPlay);
+            }
+
+            /**
+             * Render the gallery
+             */
+            renderGallery() {
+                if (this.savedPlays.length === 0) {
+                    this.galleryContent.innerHTML = '<div class="empty-gallery">No plays saved yet. Create a play and save it to see it here!</div>';
+                    return;
+                }
+
+                this.galleryContent.innerHTML = this.savedPlays.map(play => `
+                    <div class="play-item" data-play-id="${play.id}">
+                        <div class="play-name">${play.name}</div>
+                        <div class="play-info">
+                            Players: ${Object.keys(play.players).length} | 
+                            Routes: ${play.routes.length} | 
+                            ${new Date(play.timestamp).toLocaleDateString()}
+                        </div>
+                        <div class="play-actions">
+                            <button class="play-action-btn load" onclick="loadPlay(${play.id})">Load</button>
+                            <button class="play-action-btn duplicate" onclick="duplicatePlay(${play.id})">Copy</button>
+                            <button class="play-action-btn delete" onclick="deletePlay(${play.id})">Delete</button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            /**
+             * Handle gallery mouse down
+             * @param {MouseEvent} e - Mouse event
+             */
+            handleGalleryMouseDown(e) {
+                const playItem = e.target.closest('.play-item');
+                if (!playItem) return;
+
+                e.preventDefault();
+                this.startDragPlay(playItem, e.clientX, e.clientY);
+            }
+
+            /**
+             * Handle gallery mouse move
+             * @param {MouseEvent} e - Mouse event
+             */
+            handleGalleryMouseMove(e) {
+                if (!this.draggedPlay) return;
+
+                e.preventDefault();
+                this.updateDragPlay(e.clientY);
+            }
+
+            /**
+             * Handle gallery mouse up
+             * @param {MouseEvent} e - Mouse event
+             */
+            handleGalleryMouseUp(e) {
+                if (!this.draggedPlay) return;
+
+                e.preventDefault();
+                this.endDragPlay();
+            }
+
+            /**
+             * Handle gallery touch start
+             * @param {TouchEvent} e - Touch event
+             */
+            handleGalleryTouchStart(e) {
+                const touch = e.touches[0];
+                const playItem = document.elementFromPoint(touch.clientX, touch.clientY)?.closest('.play-item');
+                
+                if (!playItem) return;
+
+                e.preventDefault();
+                this.startDragPlay(playItem, touch.clientX, touch.clientY);
+            }
+
+            /**
+             * Handle gallery touch move
+             * @param {TouchEvent} e - Touch event
+             */
+            handleGalleryTouchMove(e) {
+                if (!this.draggedPlay) return;
+
+                e.preventDefault();
+                const touch = e.touches[0];
+                this.updateDragPlay(touch.clientY);
+            }
+
+            /**
+             * Handle gallery touch end
+             * @param {TouchEvent} e - Touch event
+             */
+            handleGalleryTouchEnd(e) {
+                if (!this.draggedPlay) return;
+
+                e.preventDefault();
+                this.endDragPlay();
+            }
+
+            /**
+             * Start dragging a play item
+             * @param {HTMLElement} playItem - Play item element
+             * @param {number} clientX - Client X coordinate
+             * @param {number} clientY - Client Y coordinate
+             */
+            startDragPlay(playItem, clientX, clientY) {
+                this.draggedPlay = playItem;
+                playItem.classList.add('dragging');
+
+                const rect = playItem.getBoundingClientRect();
+                this.dragOffset.y = clientY - rect.top;
+            }
+
+            /**
+             * Update drag position
+             * @param {number} clientY - Client Y coordinate
+             */
+            updateDragPlay(clientY) {
+                if (!this.draggedPlay) return;
+
+                const rect = this.galleryContent.getBoundingClientRect();
+                const y = clientY - rect.top - this.dragOffset.y;
+
+                this.draggedPlay.style.transform = `translateY(${y}px)`;
+            }
+
+            /**
+             * End dragging
+             */
+            endDragPlay() {
+                if (!this.draggedPlay) return;
+
+                // Find new position and reorder
+                const playItems = Array.from(this.galleryContent.children);
+                const draggedRect = this.draggedPlay.getBoundingClientRect();
+                const draggedCenter = draggedRect.top + draggedRect.height / 2;
+
+                // Calculate the target index in the DOM
+                let targetDomIndex = 0;
+                for (let i = 0; i < playItems.length; i++) {
+                    const item = playItems[i];
+                    if (item === this.draggedPlay) continue;
+
+                    const itemRect = item.getBoundingClientRect();
+                    const itemCenter = itemRect.top + itemRect.height / 2;
+
+                    if (draggedCenter < itemCenter) {
+                        targetDomIndex = i;
+                        break;
+                    }
+                    targetDomIndex = i + 1;
+                }
+
+                // Reorder saved plays
+                const playId = parseInt(this.draggedPlay.dataset.playId);
+                const playIndex = this.savedPlays.findIndex(p => p.id === playId);
+                
+                if (playIndex !== -1) {
+                    const [play] = this.savedPlays.splice(playIndex, 1);
+                    
+                    // Calculate the correct array index accounting for the removed item
+                    let newIndex = targetDomIndex;
+                    if (playIndex < targetDomIndex) {
+                        newIndex = targetDomIndex - 1;
+                    }
+                    
+                    this.savedPlays.splice(newIndex, 0, play);
+                    this.saveSavedPlays();
+                }
+
+                // Reset UI
+                this.draggedPlay.classList.remove('dragging');
+                this.draggedPlay.style.transform = '';
+                this.draggedPlay = null;
+
+                // Re-render gallery
+                this.renderGallery();
+            }
+
+            /**
+             * Load saved plays from localStorage
+             * @returns {Array} - Array of saved plays
+             */
+            loadSavedPlays() {
+                try {
+                    const saved = localStorage.getItem('savedPlays');
+                    return saved ? JSON.parse(saved) : [];
+                } catch (error) {
+                    console.error('Error loading saved plays:', error);
+                    return [];
+                }
+            }
+
+            /**
+             * Save plays to localStorage
+             */
+            saveSavedPlays() {
+                try {
+                    localStorage.setItem('savedPlays', JSON.stringify(this.savedPlays));
+                } catch (error) {
+                    console.error('Error saving plays:', error);
+                }
+            }
+
+            /**
+             * Export gallery data
+             */
+            exportGallery() {
+                const data = {
+                    version: '1.0',
+                    timestamp: new Date().toISOString(),
+                    plays: this.savedPlays
+                };
+
+                const jsonData = JSON.stringify(data, null, 2);
+                const blob = new Blob([jsonData], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'play-gallery.json';
+                a.click();
+                
+                URL.revokeObjectURL(url);
+            }
+
+            /**
+             * Import gallery data
+             */
+            importGallery() {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = '.json';
+                
+                input.onchange = (e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            try {
+                                const data = JSON.parse(e.target.result);
+                                if (data.plays && Array.isArray(data.plays)) {
+                                    this.savedPlays = data.plays;
+                                    this.saveSavedPlays();
+                                    this.renderGallery();
+                                    alert('Gallery imported successfully!');
+                                } else {
+                                    throw new Error('Invalid file format');
+                                }
+                            } catch (error) {
+                                console.error('Error importing gallery:', error);
+                                alert('Error importing gallery. Please check the file format.');
+                            }
+                        };
+                        reader.readAsText(file);
+                    }
+                };
+                
+                input.click();
+            }
+
+            /**
+             * Clear all plays from gallery
+             */
+            clearGallery() {
+                if (confirm('Are you sure you want to clear all plays? This cannot be undone.')) {
+                    this.savedPlays = [];
+                    this.saveSavedPlays();
+                    this.renderGallery();
+                    alert('Gallery cleared successfully!');
+                }
+            }
+
+            /**
+             * Get gallery statistics
+             * @returns {Object} - Gallery statistics
+             */
+            getGalleryStats() {
+                return {
+                    totalPlays: this.savedPlays.length,
+                    totalPlayers: this.savedPlays.reduce((sum, play) => sum + Object.keys(play.players).length, 0),
+                    totalRoutes: this.savedPlays.reduce((sum, play) => sum + play.routes.length, 0),
+                    oldestPlay: this.savedPlays.length > 0 ? new Date(Math.min(...this.savedPlays.map(p => new Date(p.timestamp)))) : null,
+                    newestPlay: this.savedPlays.length > 0 ? new Date(Math.max(...this.savedPlays.map(p => new Date(p.timestamp)))) : null
+                };
+            }
+        }
+
+        // Initialize the play gallery system
+        const gallerySystem = new PlayGallerySystem();
+
+        // Global functions for controls
+        function saveCurrentPlay() {
+            gallerySystem.saveCurrentPlay();
+        }
+
+        function loadPlay(playId) {
+            gallerySystem.loadPlay(playId);
+        }
+
+        function deletePlay(playId) {
+            gallerySystem.deletePlay(playId);
+        }
+
+        function duplicatePlay(playId) {
+            gallerySystem.duplicatePlay(playId);
+        }
+
+        function exportGallery() {
+            gallerySystem.exportGallery();
+        }
+
+        function importGallery() {
+            gallerySystem.importGallery();
+        }
+
+        function clearGallery() {
+            gallerySystem.clearGallery();
+        }
+
+        function showGalleryStats() {
+            const stats = gallerySystem.getGalleryStats();
+            let message = `Gallery Statistics:\n\n`;
+            message += `Total Plays: ${stats.totalPlays}\n`;
+            message += `Total Players: ${stats.totalPlayers}\n`;
+            message += `Total Routes: ${stats.totalRoutes}\n`;
+            
+            if (stats.oldestPlay) {
+                message += `Oldest Play: ${stats.oldestPlay.toLocaleDateString()}\n`;
+            }
+            if (stats.newestPlay) {
+                message += `Newest Play: ${stats.newestPlay.toLocaleDateString()}\n`;
+            }
+            
+            alert(message);
+        }
+
+        function createSamplePlays() {
+            // Create a few sample plays
+            gallerySystem.createSamplePlay();
+            gallerySystem.saveCurrentPlay('Sample Play 1');
+            
+            // Create another sample
+            gallerySystem.createSamplePlay();
+            gallerySystem.saveCurrentPlay('Sample Play 2');
+            
+            alert('Sample plays created and saved to gallery!');
+        }
+
+        // Export for use by other modules
+        window.PlayGallerySystem = PlayGallerySystem;
+        window.gallerySystem = gallerySystem;
+    </script>
+</body>
+</html>
