@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>6v6 Flag Football Designer</title>
+<style>
+    body {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background-color: #222;
+        color: white;
+    }
+
+    #controls {
+        margin: 10px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+        justify-content: center;
+    }
+
+    #controls select,
+    #controls button {
+        padding: 8px 12px;
+        border: none;
+        border-radius: 4px;
+        background-color: #4CAF50;
+        color: white;
+        font-size: 14px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+    }
+
+    #controls select:hover,
+    #controls button:hover {
+        background-color: #45a049;
+    }
+
+    #controls button:active {
+        transform: translateY(1px);
+    }
+
+    canvas {
+        background-color: #4CAF50;
+        border: 4px solid #000;
+        border-radius: 20px;
+        max-width: 100%;
+        height: auto;
+    }
+
+    .player {
+        position: absolute;
+        width: 60px;
+        height: 60px;
+        border: 4px solid black;
+        text-align: center;
+        line-height: 60px;
+        font-weight: bold;
+        font-size: 18px;
+        cursor: grab;
+        user-select: none;
+        transition: transform 0.2s;
+    }
+
+    .player:active {
+        cursor: grabbing;
+        transform: scale(1.1);
+    }
+
+    .qb, .wr {
+        border-radius: 50%;
+    }
+
+    .wr {
+        background-color: white;
+        color: black;
+    }
+
+    .qb {
+        background-color: rgb(255, 22, 22);
+        color: rgb(255, 255, 255);
+    }
+
+    .center {
+        width: 60px;
+        height: 60px;
+        background-color: rgb(52, 52, 52);
+        color: rgb(255, 255, 255);
+        border-radius: 0;
+    }
+
+    #eraserCursor {
+        position: absolute;
+        width: 40px;
+        height: 40px;
+        border: 2px solid white;
+        border-radius: 50%;
+        pointer-events: none;
+        display: none;
+        z-index: 1000;
+    }
+
+    .field-container {
+        position: relative;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 100%;
+        max-width: 100vw;
+        overflow: hidden;
+    }
+
+    /* Responsive design */
+    @media (max-width: 768px) {
+        #controls {
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        #controls select,
+        #controls button {
+            width: 100%;
+            max-width: 200px;
+            font-size: 16px;
+            padding: 12px;
+        }
+        
+        canvas {
+            border-radius: 10px;
+            border-width: 2px;
+        }
+        
+        .player {
+            width: 50px;
+            height: 50px;
+            line-height: 50px;
+            font-size: 16px;
+        }
+        
+        .center {
+            width: 50px;
+            height: 50px;
+        }
+    }
+
+    @media (max-width: 480px) {
+        #controls {
+            margin: 5px;
+        }
+        
+        .player {
+            width: 45px;
+            height: 45px;
+            line-height: 45px;
+            font-size: 14px;
+        }
+        
+        .center {
+            width: 45px;
+            height: 45px;
+        }
+    }
+
+    /* Touch-friendly improvements */
+    @media (hover: none) and (pointer: coarse) {
+        .player {
+            width: 60px;
+            height: 60px;
+            line-height: 60px;
+        }
+        
+        .center {
+            width: 60px;
+            height: 60px;
+        }
+        
+        #controls button {
+            min-height: 44px;
+            min-width: 44px;
+        }
+    }
+</style>
+</head>
+<body>
+<div id="controls">
+    <label>
+        Formation:
+        <select id="formationSelect">
+            <option value="gunEmptyBunchRight">Gun Empty Bunch Right</option>
+            <option value="gunEmptyBunchLeft">Gun Empty Bunch Left</option>
+            <option value="gunEmptyAce">Gun Empty Ace</option>
+            <option value="custom">Custom</option>
+        </select>
+    </label>
+    
+    <button id="drawBtn">Draw</button>
+    <button id="eraseBtn">Eraser</button>
+    <button id="undoBtn">Undo Marker</button>
+    <button id="clearBtn">Clear</button>
+</div>
+
+<div class="field-container">
+    <canvas id="canvas"></canvas>
+    <div id="playersContainer"></div>
+    <div id="eraserCursor"></div>
+</div>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const playersContainer = document.getElementById('playersContainer');
+const formationSelect = document.getElementById('formationSelect');
+const eraserCursor = document.getElementById('eraserCursor');
+
+const snapGrid = 30;
+let drawing = true;
+let erasing = false;
+let isMouseDown = false;
+let players = {};
+let drawingHistory = [];
+let currentPath = null;
+let canvasSize = { width: 1920, height: 1080 };
+
+// Calculate responsive canvas size
+function calculateCanvasSize() {
+    const maxWidth = Math.min(window.innerWidth - 40, 1920);
+    const maxHeight = Math.min(window.innerHeight - 200, 1080);
+    
+    const aspectRatio = 16 / 9;
+    let width = maxWidth;
+    let height = width / aspectRatio;
+    
+    if (height > maxHeight) {
+        height = maxHeight;
+        width = height * aspectRatio;
+    }
+    
+    return { width: Math.floor(width), height: Math.floor(height) };
+}
+
+// Formation positions as percentages of canvas dimensions
+function getFormations(canvasWidth, canvasHeight) {
+    return {
+        gunEmptyBunchRight: {
+            center: { top: canvasHeight * 0.64 },
+            qb: { top: canvasHeight * 0.81 },
+            wr1: { left: canvasWidth * 0.70, top: canvasHeight * 0.69 },
+            wr2: { left: canvasWidth * 0.75, top: canvasHeight * 0.64 },
+            wr3: { left: canvasWidth * 0.80, top: canvasHeight * 0.69 },
+            wr4: { left: canvasWidth * 0.21, top: canvasHeight * 0.64 }
+        },
+        gunEmptyBunchLeft: {
+            center: { top: canvasHeight * 0.56 },
+            qb: { top: canvasHeight * 0.69 },
+            wr1: { left: canvasWidth * 0.27, top: canvasHeight * 0.61 },
+            wr2: { left: canvasWidth * 0.22, top: canvasHeight * 0.56 },
+            wr3: { left: canvasWidth * 0.17, top: canvasHeight * 0.61 },
+            wr4: { left: canvasWidth * 0.73, top: canvasHeight * 0.56 }
+        },
+        gunEmptyAce: {
+            center: { top: canvasHeight * 0.64 },
+            qb: { top: canvasHeight * 0.81 },
+            wr1: { left: canvasWidth * 0.14, top: canvasHeight * 0.64 },
+            wr2: { left: canvasWidth * 0.31, top: canvasHeight * 0.64 },
+            wr3: { left: canvasWidth * 0.66, top: canvasHeight * 0.64 },
+            wr4: { left: canvasWidth * 0.83, top: canvasHeight * 0.64 }
+        }
+    };
+}
+
+// Get canvas position from event
+function getCanvasPos(e) {
+    const rect = canvas.getBoundingClientRect();
+    if (e.touches) {
+        return {
+            x: e.touches[0].clientX - rect.left,
+            y: e.touches[0].clientY - rect.top
+        };
+    } else {
+        return {
+            x: e.clientX - rect.left,
+            y: e.clientY - rect.top
+        };
+    }
+}
+
+// Snap to grid helper
+function snap(value) {
+    return Math.round(value / snapGrid) * snapGrid;
+}
+
+// Create player element
+function createPlayer(id, text, className) {
+    const div = document.createElement('div');
+    div.id = id;
+    div.className = `player ${className}`;
+    div.innerText = text;
+    div.style.left = `${canvasSize.width / 2 - 30}px`;
+    div.style.top = '0px';
+    playersContainer.appendChild(div);
+    makeDraggable(div);
+    return div;
+}
+
+// Make element draggable
+function makeDraggable(element) {
+    if (element.id === 'center') return;
+
+    let offsetX, offsetY;
+
+    const startDrag = e => {
+        e.preventDefault();
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+        offsetX = clientX - element.offsetLeft;
+        offsetY = clientY - element.offsetTop;
+
+        document.addEventListener(e.touches ? 'touchmove' : 'mousemove', drag);
+        document.addEventListener(e.touches ? 'touchend' : 'mouseup', drop);
+    };
+
+    const drag = e => {
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+        let x = snap(clientX - offsetX);
+        let y = snap(clientY - offsetY);
+
+        if (element.id === 'qb') {
+            x = canvasSize.width / 2 - element.offsetWidth / 2;
+        }
+
+        if (y < players.center.offsetTop) {
+            y = players.center.offsetTop;
+        }
+
+        element.style.left = x + 'px';
+        element.style.top = y + 'px';
+    };
+
+    const drop = e => {
+        document.removeEventListener(e.touches ? 'touchmove' : 'mousemove', drag);
+        document.removeEventListener(e.touches ? 'touchend' : 'mouseup', drop);
+    };
+
+    element.addEventListener('mousedown', startDrag);
+    element.addEventListener('touchstart', startDrag, { passive: false });
+}
+
+// Smooth path helper
+function smoothPath(points) {
+    if (points.length < 3) return points;
+    const smoothed = [points[0]];
+
+    for (let i = 1; i < points.length - 1; i++) {
+        const prev = points[i - 1];
+        const curr = points[i];
+        const next = points[i + 1];
+
+        const mx = (prev.x + curr.x + next.x) / 3;
+        const my = (prev.y + curr.y + next.y) / 3;
+        smoothed.push({ x: mx, y: my });
+    }
+
+    smoothed.push(points[points.length - 1]);
+    return smoothed;
+}
+
+// Straighten path helper
+function straightenPath(points, tolerance = 5) {
+    if (points.length < 2) return points;
+
+    const start = points[0];
+    const end = points[points.length - 1];
+    const dx = end.x - start.x;
+    const dy = end.y - start.y;
+    const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+
+    const snapAngles = [0, 45, 90, 135, 180, -45, -90, -135];
+    let closest = snapAngles[0];
+    let minDiff = Math.abs(angle - snapAngles[0]);
+    
+    for (let a of snapAngles) {
+        const diff = Math.abs(angle - a);
+        if (diff < minDiff) {
+            minDiff = diff;
+            closest = a;
+        }
+    }
+
+    if (minDiff <= tolerance) {
+        const radians = closest * Math.PI / 180;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        const newPoints = [];
+        
+        for (let i = 0; i <= points.length - 1; i++) {
+            const t = i / (points.length - 1);
+            newPoints.push({
+                x: start.x + t * distance * Math.cos(radians),
+                y: start.y + t * distance * Math.sin(radians)
+            });
+        }
+        return newPoints;
+    }
+
+    return points;
+}
+
+// Set formation
+function setFormation(name) {
+    const formations = getFormations(canvasSize.width, canvasSize.height);
+    const f = formations[name];
+    if (!f) return;
+
+    if (players.center) {
+        players.center.style.top = `${f.center.top}px`;
+        players.center.style.left = `${canvasSize.width / 2 - 30}px`;
+    }
+
+    if (players.qb) {
+        players.qb.style.top = `${f.qb.top}px`;
+        players.qb.style.left = `${canvasSize.width / 2 - 30}px`;
+    }
+
+    if (players.wr1) {
+        players.wr1.style.top = `${f.wr1.top}px`;
+        players.wr1.style.left = `${f.wr1.left}px`;
+    }
+
+    if (players.wr2) {
+        players.wr2.style.top = `${f.wr2.top}px`;
+        players.wr2.style.left = `${f.wr2.left}px`;
+    }
+
+    if (players.wr3) {
+        players.wr3.style.top = `${f.wr3.top}px`;
+        players.wr3.style.left = `${f.wr3.left}px`;
+    }
+
+    if (players.wr4) {
+        players.wr4.style.top = `${f.wr4.top}px`;
+        players.wr4.style.left = `${f.wr4.left}px`;
+    }
+}
+
+// Redraw canvas
+function redrawCanvas() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Draw 30x30 grid
+    ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+    ctx.lineWidth = 1;
+    for (let x = 0; x <= canvas.width; x += snapGrid) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, canvas.height);
+        ctx.stroke();
+    }
+    for (let y = 0; y <= canvas.height; y += snapGrid) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(canvas.width, y);
+        ctx.stroke();
+    }
+
+    // Draw hashmarks
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    const hashWidth = 35;
+    const hashHeight = 4;
+    const verticalSpacing = 36;
+
+    const leftOffset1 = 0;
+    const rightOffset1 = canvas.width - hashWidth;
+    for (let y = 0; y < canvas.height; y += verticalSpacing) {
+        ctx.fillRect(leftOffset1, y, hashWidth, hashHeight);
+        ctx.fillRect(rightOffset1, y, hashWidth, hashHeight);
+    }
+
+    const leftOffset2 = canvas.width * 0.1;
+    const rightOffset2 = canvas.width - canvas.width * 0.1 - hashWidth;
+    for (let y = 0; y < canvas.height; y += verticalSpacing) {
+        ctx.fillRect(leftOffset2, y, hashWidth, hashHeight);
+        ctx.fillRect(rightOffset2, y, hashWidth, hashHeight);
+    }
+
+    // Draw horizontal field lines
+    ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+    ctx.lineWidth = 4;
+    const lineSpacing = 180.5;
+    for (let y = 0; y <= canvas.height; y += lineSpacing) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(canvas.width, y);
+        ctx.stroke();
+    }
+
+    // Draw all user paths
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = 'black';
+    ctx.lineWidth = 6;
+
+    drawingHistory.forEach(path => {
+        ctx.beginPath();
+        path.points.forEach((p, i) => {
+            if (i === 0) ctx.moveTo(p.x, p.y);
+            else ctx.lineTo(p.x, p.y);
+        });
+        ctx.stroke();
+    });
+}
+
+// Drawing functions
+function startDrawing(e) {
+    if (!drawing) return;
+    isMouseDown = true;
+    const pos = getCanvasPos(e);
+    
+    if (!erasing) {
+        currentPath = { points: [{ x: pos.x, y: pos.y }] };
+        drawingHistory.push(currentPath);
+    }
+    draw(e);
+}
+
+function draw(e) {
+    if (!drawing || !isMouseDown) return;
+    const pos = getCanvasPos(e);
+
+    if (erasing) {
+        const radius = 15;
+        drawingHistory.forEach(path => {
+            path.points = path.points.filter(p => {
+                const dx = p.x - pos.x;
+                const dy = p.y - pos.y;
+                return dx * dx + dy * dy > radius * radius;
+            });
+        });
+        drawingHistory = drawingHistory.filter(path => path.points.length > 0);
+        redrawCanvas();
+    } else if (currentPath) {
+        currentPath.points.push({ x: pos.x, y: pos.y });
+        redrawCanvas();
+    }
+}
+
+function stopDrawing() {
+    isMouseDown = false;
+    if (currentPath) {
+        currentPath.points = smoothPath(currentPath.points);
+        currentPath.points = straightenPath(currentPath.points, 5);
+        currentPath = null;
+        redrawCanvas();
+    }
+}
+
+// Update eraser cursor
+function updateEraserCursor(x, y) {
+    eraserCursor.style.left = `${x - 20}px`;
+    eraserCursor.style.top = `${y - 20}px`;
+}
+
+// Handle window resize
+function handleResize() {
+    canvasSize = calculateCanvasSize();
+    canvas.width = canvasSize.width;
+    canvas.height = canvasSize.height;
+    
+    // Clear existing players
+    playersContainer.innerHTML = '';
+    
+    // Create players
+    players.center = createPlayer('center', 'C', 'center');
+    players.qb = createPlayer('qb', 'QB', 'qb');
+    players.wr1 = createPlayer('wr1', 'WR1', 'wr');
+    players.wr2 = createPlayer('wr2', 'WR2', 'wr');
+    players.wr3 = createPlayer('wr3', 'WR3', 'wr');
+    players.wr4 = createPlayer('wr4', 'WR4', 'wr');
+    
+    setFormation(formationSelect.value);
+    redrawCanvas();
+}
+
+// Initialize
+window.addEventListener('resize', handleResize);
+handleResize(); // Initial setup
+
+// Event listeners
+canvas.addEventListener('mousedown', startDrawing);
+canvas.addEventListener('mousemove', draw);
+canvas.addEventListener('mouseup', stopDrawing);
+canvas.addEventListener('mouseleave', stopDrawing);
+
+canvas.addEventListener('touchstart', startDrawing, { passive: false });
+canvas.addEventListener('touchmove', draw, { passive: false });
+canvas.addEventListener('touchend', stopDrawing);
+canvas.addEventListener('touchcancel', stopDrawing);
+
+document.getElementById('undoBtn').addEventListener('click', () => {
+    if (drawingHistory.length > 0) {
+        drawingHistory.pop();
+        redrawCanvas();
+    }
+});
+
+document.getElementById('clearBtn').addEventListener('click', () => {
+    drawingHistory = [];
+    redrawCanvas();
+});
+
+document.getElementById('drawBtn').addEventListener('click', () => {
+    drawing = true;
+    erasing = false;
+    eraserCursor.style.display = 'none';
+});
+
+document.getElementById('eraseBtn').addEventListener('click', () => {
+    drawing = true;
+    erasing = true;
+    eraserCursor.style.display = 'block';
+});
+
+formationSelect.addEventListener('change', () => {
+    const formation = formationSelect.value;
+    if (formation !== 'custom') {
+        setFormation(formation);
+        drawingHistory = [];
+        redrawCanvas();
+    }
+});
+
+// Mouse and touch events for eraser cursor
+document.addEventListener('mousemove', e => {
+    if (erasing) {
+        const rect = canvas.getBoundingClientRect();
+        updateEraserCursor(e.clientX - rect.left, e.clientY - rect.top);
+    }
+});
+
+document.addEventListener('touchmove', e => {
+    if (erasing) {
+        const rect = canvas.getBoundingClientRect();
+        const touch = e.touches[0];
+        updateEraserCursor(touch.clientX - rect.left, touch.clientY - rect.top);
+    }
+}, { passive: false });
+</script>
+</body>
+</html>
